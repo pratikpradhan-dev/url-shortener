@@ -3,37 +3,39 @@ const mongoose = require('mongoose')
 const ShortUrl = require('./models/shortUrl')
 const app = express()
 
-const uri = "mongodb://127.0.0.1:27017/url_shortener"; // local database
+// 🔧 Use environment variable for MongoDB (fallback for local)
+const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/url_shortener";
 
 mongoose.connect(uri)
-  .then(() => console.log("✅ MongoDB connected locally"))
+  .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 
 app.set('view engine', 'ejs')
 app.use(express.urlencoded({ extended: false }))
 
+// Home route
 app.get('/', async (req, res) => {
   const shortUrls = await ShortUrl.find()
   res.render('index', { shortUrls: shortUrls })
 })
 
+// Create short URL
 app.post('/shortUrls', async (req, res) => {
   await ShortUrl.create({ full: req.body.fullUrl })
-
   res.redirect('/')
 })
 
+// Redirect route
 app.get('/:shortUrl', async (req, res) => {
   const shortUrl = await ShortUrl.findOne({ short: req.params.shortUrl })
   if (shortUrl == null) return res.sendStatus(404)
 
   shortUrl.clicks++
-  shortUrl.save()
+  await shortUrl.save()
 
   res.redirect(shortUrl.full)
 })
 
-// app.listen(process.env.PORT || 5000);
-const PORT = 5000;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-app.listen(PORT, "0.0.0.0", () => console.log(`Server running`));
+// 🔧 IMPORTANT: Dynamic port for deployment
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
